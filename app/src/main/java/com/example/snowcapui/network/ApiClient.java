@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import java.io.*;
 import java.net.*;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class ApiClient {
@@ -35,8 +36,7 @@ public class ApiClient {
         SERVER_URL = "http://" + savedIp + ":5000/snowlevel"; // Set API URL
     }
 
-    // Fetch the latest snow level from the server
-    public static String getSnowLevel(Context context) throws IOException {
+    public static SnowData getSnowData(Context context) throws IOException {
         if (SERVER_URL == null) {
             loadServerIp(context); // Ensure SERVER_URL is set
         }
@@ -55,10 +55,29 @@ public class ApiClient {
         reader.close();
 
         try {
-            JSONObject jsonResponse = new JSONObject(response.toString());
-            return jsonResponse.getString("snow_level");
+            JSONObject jsonObject = new JSONObject(response.toString());
+            double snowLevel = jsonObject.getDouble("snow_level");
+
+            JSONArray coverageArray = jsonObject.getJSONArray("segment_coverage");
+            double[] segmentCoverage = new double[3];
+            for (int i = 0; i < 3; i++) {
+                segmentCoverage[i] = coverageArray.getDouble(i);
+            }
+
+            return new SnowData(snowLevel, segmentCoverage);
         } catch (Exception e) {
-            return "Invalid response format";
+            return null; // Return null if parsing fails
+        }
+    }
+
+    // Data class to store snow data
+    public static class SnowData {
+        public double snowLevel;
+        public double[] segmentCoverage;
+
+        public SnowData(double snowLevel, double[] segmentCoverage) {
+            this.snowLevel = snowLevel;
+            this.segmentCoverage = segmentCoverage;
         }
     }
 }

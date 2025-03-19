@@ -2,7 +2,30 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="30dp">
+    android:padding="30dp"
+    android:background="#F5F5F5">
+
+    <!-- Title Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <ImageView
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:src="@drawable/snowcap" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SnowCap"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:paddingLeft="10dp"/>
+    </LinearLayout>
 
     <EditText
         android:id="@+id/ipInput"
@@ -25,4 +48,130 @@
         android:text="Salt Dispensing Rate: Loading..."
         android:textSize="20sp"
         android:textStyle="bold"/>
+    <!-- Label Above the Bar Graph -->
+    <TextView
+        android:id="@+id/saltRateLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Salt Dispensing Rate"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:paddingTop="10dp"/>
+
+    <!-- Bar Graph (ProgressBar) -->
+    <ProgressBar
+        android:id="@+id/saltRateBar"
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:max="100"
+        android:progress="0"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:progressDrawable="@drawable/progress_bar_custom"/>
+
+    <!-- Text Showing the Percentage -->
+    <TextView
+        android:id="@+id/saltRateValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0%"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:paddingTop="5dp"/>
+
+    <!-- Manual Override Toggle -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Manual Override"
+        android:textSize="16sp"
+        android:paddingTop="10dp"/>
+
+    <ToggleButton
+        android:id="@+id/manualOverrideButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textOn="ON"
+        android:textOff="OFF"
+        android:background="@drawable/toggle_button"
+        android:textSize="18sp"/>
+
+    <!-- Manual Dispensing Rate Slider -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Manual Dispense Rate"
+        android:textSize="16sp"
+        android:paddingTop="10dp"/>
+
+    <SeekBar
+        android:id="@+id/saltRateSlider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100"/>
+
+
+    <!-- Snow Coverage Indicators -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Snow Coverage"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:paddingTop="10dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <View
+            android:id="@+id/leftSnowIndicator"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:background="@color/material_dynamic_primary0"/>
+
+        <View
+            android:id="@+id/middleSnowIndicator"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:background="@color/material_dynamic_primary0"/>
+
+        <View
+            android:id="@+id/rightSnowIndicator"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:background="@color/material_dynamic_primary0"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Left"
+            android:gravity="center"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Middle"
+            android:gravity="center"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Right"
+            android:gravity="center"/>
+    </LinearLayout>
 </LinearLayout>
