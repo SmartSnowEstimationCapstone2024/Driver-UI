@@ -2,8 +2,13 @@ package com.example.snowcapui.network;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
+
 import java.io.*;
 import java.net.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -56,28 +61,88 @@ public class ApiClient {
 
         try {
             JSONObject jsonObject = new JSONObject(response.toString());
-            double snowLevel = jsonObject.getDouble("snow_level");
 
+            double snowLevel = jsonObject.getDouble("snow_level");
             JSONArray coverageArray = jsonObject.getJSONArray("segment_coverage");
             double[] segmentCoverage = new double[3];
             for (int i = 0; i < 3; i++) {
                 segmentCoverage[i] = coverageArray.getDouble(i);
             }
 
-            return new SnowData(snowLevel, segmentCoverage);
+            // New values from Flask server
+            boolean overrideFlag = jsonObject.getBoolean("override_flag");
+            int overridePreset = jsonObject.getInt("override_preset");
+            double dispensingRate = jsonObject.getDouble("dispensing_rate");
+
+
+            return new SnowData(snowLevel, segmentCoverage, overrideFlag, overridePreset, dispensingRate);
         } catch (Exception e) {
             return null; // Return null if parsing fails
         }
     }
 
-    // Data class to store snow data
+    // Updated Data class to store additional values
     public static class SnowData {
         public double snowLevel;
         public double[] segmentCoverage;
+        public boolean overrideFlag;
+        public int overridePreset;
+        public double dispensingRate;
 
-        public SnowData(double snowLevel, double[] segmentCoverage) {
+        public SnowData(double snowLevel, double[] segmentCoverage, boolean overrideFlag, int overridePreset, double dispensingRate) {
             this.snowLevel = snowLevel;
             this.segmentCoverage = segmentCoverage;
+            this.overrideFlag = overrideFlag;
+            this.overridePreset = overridePreset;
+            this.dispensingRate = dispensingRate;
         }
     }
+
+    public static void sendOverrideData(Context context, boolean overrideFlag, int overridePreset) {
+        if (SERVER_URL == null) {
+            loadServerIp(context);
+        }
+
+        // Run network call in a background thread
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            try {
+                URL url = new URL(SERVER_URL);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("POST");
+                connection.setRequestProperty("Content-Type", "application/json");
+                connection.setDoOutput(true);
+
+                // Create JSON payload
+                JSONObject json = new JSONObject();
+                json.put("override_flag", overrideFlag);
+                json.put("override_preset", overridePreset);
+
+                // Send JSON data
+                OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
+                writer.write(json.toString());
+                writer.flush();
+                writer.close();
+
+                int responseCode = connection.getResponseCode();
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    Log.d("API", "Override data sent successfully");
+                } else {
+                    BufferedReader errorReader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
+                    StringBuilder errorResponse = new StringBuilder();
+                    String errorLine;
+                    while ((errorLine = errorReader.readLine()) != null) {
+                        errorResponse.append(errorLine);
+                    }
+                    errorReader.close();
+
+                    Log.e("API", "Failed to send override data, Response Code: " + responseCode + ", Error: " + errorResponse.toString());
+                }
+            } catch (Exception e) {
+                Log.e("API", "Error sending override data", e);
+            }
+        });
+    }
+
+
 }

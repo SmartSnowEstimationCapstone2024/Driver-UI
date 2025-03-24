@@ -34,7 +34,8 @@ public class MainActivity extends AppCompatActivity {
 
     // Variables to store API data
     private boolean overrideState = false;
-    private float manualDispenseRate = 0f;
+    private int overridePreset = 0;
+    private float manualDispenseRate = 0;
     private float calculatedDispenseRate = 0f;
     private float leftSnow = 0f, middleSnow = 0f, rightSnow = 0f;
 
@@ -72,31 +73,47 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Toggle manual override
         manualOverrideButton.setOnCheckedChangeListener((buttonView, isChecked) -> {
             overrideState = isChecked;
-            updateSaltRate();
+            sendOverrideData(); // Ensure the server knows about the override
+            updateSaltRate(); // Update UI immediately
         });
 
-        // Adjust slider to 4 fixed levels
-        saltRateSlider.setMax(100);
+
+
+        saltRateSlider.setMax(4); // Set max to 4 (values: 0, 1, 2, 3, 4)
         saltRateSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    int closestValue = getClosestSliderValue(progress);
-                    seekBar.setProgress(closestValue);
-                    manualDispenseRate = closestValue / 100f;
-                    updateSaltRate();
+                    overridePreset = progress;
+                    Log.d("SLIDER", "Override Preset set to: " + overridePreset);
                 }
             }
+
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {}
+
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                sendOverrideData();
+                updateSaltRate(); // Update UI when slider is released
+            }
         });
 
+
+
         startRepeatingTask();
+    }
+
+    private void sendOverrideData() {
+        new Thread(() -> {
+            try {
+                ApiClient.sendOverrideData(MainActivity.this, manualOverrideButton.isChecked(), overridePreset);
+            } catch (Exception e) {
+                Log.e("API", "Error sending override data", e);
+            }
+        }).start();
     }
 
     private int getClosestSliderValue(int progress) {
@@ -110,30 +127,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateSaltRate() {
-        float rate;
+        float kg_km;
 
         if (overrideState) {
-            // Override mode: use manual slider setting
-            rate = manualDispenseRate;
+            // Override mode: Use manual preset rate
+            kg_km = getSaltRateFromPreset(overridePreset);
         } else {
-            // Auto mode: Normalize snow level to dispensing range (0 - 100%)
-            float minSnowLevel = 0.1f;  // Adjust based on real minimum snow level
-            float maxSnowLevel = 1.7f; // Adjust based on max expected snow level
-            float minDispenseRate = 0f;
-            float maxDispenseRate = 1f; // 1 = 100% dispense rate
-
-            // Ensure snow level is within range before normalizing
-            float normalizedSnowLevel = Math.max(minSnowLevel, Math.min(maxSnowLevel, calculatedDispenseRate));
-
-            // Apply normalization formula
-            rate = minDispenseRate + (normalizedSnowLevel - minSnowLevel) / (maxSnowLevel - minSnowLevel) * (maxDispenseRate - minDispenseRate);
+            // Auto mode: Use API-calculated dispensing rate
+            kg_km = calculatedDispenseRate;
         }
 
-        // Convert rate to percentage for display
-        int displayRate = (int) (rate * 100);
-        saltRateBar.setProgress(displayRate);
-        saltRateValue.setText(String.format("Salt Rate: %d%%", displayRate));
+        int percentRate =(int)((calculatedDispenseRate)/2.6);
+
+        saltRateBar.setProgress(percentRate);
+        saltRateValue.setText(String.format("Salt Rate: %d%% (%.0f kg/lane km)", percentRate, kg_km));
     }
+
+
 
 
     private final Runnable updateTask = new Runnable() {
@@ -145,21 +155,31 @@ public class MainActivity extends AppCompatActivity {
                     if (snowData != null) {
                         double snowLevel = snowData.snowLevel;
                         double[] segmentCoverage = snowData.segmentCoverage;
+                        boolean overrideFlagFromApi = snowData.overrideFlag;
+                        int overridePresetFromApi = snowData.overridePreset;
+                        double dispensingRateFromApi = snowData.dispensingRate;
 
                         Log.d("API_RESPONSE", "Snow Level: " + snowLevel);
                         Log.d("API_RESPONSE", "Segment Coverage: " + Arrays.toString(segmentCoverage));
+                        Log.d("API_RESPONSE", "Override Flag: " + overrideFlagFromApi);
+                        Log.d("API_RESPONSE", "Override Preset: " + overridePresetFromApi);
+                        Log.d("API_RESPONSE", "Dispensing Rate: " + dispensingRateFromApi);
 
                         leftSnow = (float) segmentCoverage[0] / 100f;
                         middleSnow = (float) segmentCoverage[1] / 100f;
                         rightSnow = (float) segmentCoverage[2] / 100f;
-
-                        calculatedDispenseRate = (float) (snowLevel * 0.2);
+                        calculatedDispenseRate = (float) dispensingRateFromApi; // Use API value
 
                         handler.post(() -> {
                             updateSaltRate();
-                            leftSnowIndicator.setAlpha(leftSnow);
-                            middleSnowIndicator.setAlpha(middleSnow);
-                            rightSnowIndicator.setAlpha(rightSnow);
+                            leftSnowIndicator.setAlpha(1.0f - leftSnow);
+                            middleSnowIndicator.setAlpha(1.0f - middleSnow);
+                            rightSnowIndicator.setAlpha(1.0f - rightSnow);
+
+
+                            // Update UI for override values
+                            manualOverrideButton.setChecked(overrideFlagFromApi);
+                            statusText.setText("Override Preset: " + overridePresetFromApi);
                         });
 
                     } else {
@@ -177,6 +197,17 @@ public class MainActivity extends AppCompatActivity {
             handler.postDelayed(this, UPDATE_INTERVAL);
         }
     };
+
+    private float getSaltRateFromPreset(int preset) {
+        switch (preset) {
+            case 1: return 90f;
+            case 2: return 130f;
+            case 3: return 180f;
+            case 4: return 260f;
+            default: return 0f; // Case 0: No salt applied
+        }
+    }
+
 
     private void startRepeatingTask() {
         handler.post(updateTask);
