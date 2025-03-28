@@ -168,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
                         leftSnow = (float) segmentCoverage[0] / 100f;
                         middleSnow = (float) segmentCoverage[1] / 100f;
                         rightSnow = (float) segmentCoverage[2] / 100f;
-                        calculatedDispenseRate = (float) dispensingRateFromApi; // Use API value
+                        calculatedDispenseRate = (float) (dispensingRateFromApi * 260); // Use API value
 
                         handler.post(() -> {
                             updateSaltRate();
@@ -182,15 +182,16 @@ public class MainActivity extends AppCompatActivity {
                             statusText.setText("Override Preset: " + overridePresetFromApi);
                         });
 
-                    } else {
+                    } /*else {
                         handler.post(() -> statusText.setText("Error: Invalid response"));
-                    }
+                    }*/
 
                 } catch (IOException e) {
                     handler.post(() -> {
                         statusText.setText("Error: " + e.getMessage());
                         saltRateValue.setText("Error");
                     });
+                    e.printStackTrace();
                 }
             });
 

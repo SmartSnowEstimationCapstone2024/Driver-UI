@@ -49,17 +49,25 @@ public class ApiClient {
         URL url = new URL(SERVER_URL);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        connection.setRequestProperty("Connection", "close");
         StringBuilder response = new StringBuilder();
-        String line;
 
-        while ((line = reader.readLine()) != null) {
-            response.append(line);
+        if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+                String line;
+
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+            } catch (IOException e) {
+                Log.e("Failed to receive http stream.", e.getMessage());
+            }
         }
-        reader.close();
+        connection.disconnect();
 
         try {
+            Log.i("API", response.toString());
             JSONObject jsonObject = new JSONObject(response.toString());
 
             double snowLevel = jsonObject.getDouble("snow_level");
@@ -77,6 +85,7 @@ public class ApiClient {
 
             return new SnowData(snowLevel, segmentCoverage, overrideFlag, overridePreset, dispensingRate);
         } catch (Exception e) {
+            Log.e("API", "Error receiving dispense data", e);
             return null; // Return null if parsing fails
         }
     }
@@ -138,6 +147,7 @@ public class ApiClient {
 
                     Log.e("API", "Failed to send override data, Response Code: " + responseCode + ", Error: " + errorResponse.toString());
                 }
+                connection.disconnect();
             } catch (Exception e) {
                 Log.e("API", "Error sending override data", e);
             }
